@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
+  Button,
   Alert,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackScreenProps } from '@react-navigation/stack';
 import { ManageStackParamList } from '../navigation/ManageStackNavigator';
 // 1. Import our new functions

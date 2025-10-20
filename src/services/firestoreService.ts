@@ -172,3 +172,97 @@ export const getStudentDetails = async (studentId: string) => {
       caseHistory: newCaseHistory,
     });
   };
+
+  
+  /**
+   * [Faculty] Fetches all students assigned to a specific faculty member.
+   * @param facultyId - The UID of the logged-in faculty member.
+   */
+  export const getStudentsByFaculty = async (facultyId: string) => {
+    // 1. Get references
+    const detailsCollectionRef = collection(db, 'studentDetails');
+    const usersCollectionRef = collection(db, 'users');
+  
+    // 2. Query for details where 'assignedFacultyIds' array contains the faculty's ID
+    const q = query(
+      detailsCollectionRef,
+      where('assignedFacultyIds', 'array-contains', facultyId)
+    );
+    
+    const detailsSnapshot = await getDocs(q);
+  
+    if (detailsSnapshot.empty) {
+      return []; // No students found
+    }
+  
+    // 3. Get the UIDs of the matching students
+    const studentIds = detailsSnapshot.docs.map((doc) => doc.id);
+  
+    // 4. Now, fetch the UserProfile for each of those students.
+    // We use 'in' query to get all profiles in one go.
+    const usersQuery = query(
+      usersCollectionRef,
+      where('uid', 'in', studentIds)
+    );
+    
+    const usersSnapshot = await getDocs(usersQuery);
+  
+    // 5. Map the results
+    const students: UserProfile[] = [];
+    usersSnapshot.forEach((doc) => {
+      students.push(doc.data() as UserProfile);
+    });
+  
+    return students;
+  };
+
+  // ... (keep all existing code)
+import {
+    // ... (keep existing imports)
+    Timestamp, // 1. Import Timestamp
+  } from 'firebase/firestore';
+  import { AttendanceRecord } from '../types'; // 2. Import AttendanceRecord type
+  
+  // ... (keep all existing functions)
+  
+  /**
+   * [Faculty] Marks a student's attendance for today.
+   * Creates or overwrites the record for that student for the current day.
+   * @param studentId - The UID of the student.
+   *a * @param studentName - The student's full name (for easier reporting).
+   * @param status - 'present' or 'absent'.
+   * @param facultyId - The UID of the faculty member marking attendance.
+   */
+  export const markAttendance = async (
+    studentId: string,
+    studentName: string,
+    status: 'present' | 'absent',
+    facultyId: string
+  ) => {
+    // 1. Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 2. Create a unique document ID for this student and this day
+    const docId = `${studentId}_${today}`;
+    
+    // 3. Get a reference to this specific document
+    const attendanceDocRef = doc(db, 'attendanceRecords', docId);
+  
+    // 4. Create the attendance record object
+    const record: AttendanceRecord = {
+      id: docId,
+      studentId: studentId,
+      studentName: studentName,
+      date: today,
+      status: status,
+      // Use Firebase's server timestamp for accuracy
+      checkInTime: status === 'present' ? Date.now() : 0, 
+      checkOutTime: null,
+      markedBy: facultyId,
+      geofenceEvent: 'manual',
+    };
+    
+    // 5. Use setDoc to create or overwrite the record
+    // This ensures a student can only have one record per day
+    await setDoc(attendanceDocRef, record);
+  };

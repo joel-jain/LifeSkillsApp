@@ -1,17 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const MyChildAttendanceScreen = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Child's Attendance</Text>
-      <Text>Your child's attendance status and history will appear here.</Text>
-      {/* We will load and display the child's attendance data */}
-    </View>
+    // 2. Use SafeAreaView as the root component
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>My Child's Attendance</Text>
+        <Text>Your child's attendance status and history will appear here.</Text>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  // 3. Add styles for safeArea
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     padding: 20,

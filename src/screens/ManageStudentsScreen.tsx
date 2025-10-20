@@ -5,24 +5,16 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
   TouchableOpacity,
   Button,
 } from 'react-native';
-import { StackScreenProps } from '@react-navigation/stack';
-import { ManageStackParamList } from '../navigation/ManageStackNavigator';
-import { getStudentsByRole } from '../services/firestoreService';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { getStudentsByFaculty } from '../services/firestoreService';
 import { UserProfile } from '../types';
+import { useAuth } from '../store/AuthContext'; // 1. Import useAuth
 
-type Props = StackScreenProps<ManageStackParamList, 'ManageStudents'>;
-
-const StudentItem = ({
-  item,
-  onEdit,
-}: {
-  item: UserProfile;
-  onEdit: () => void;
-}) => (
+// A simple component to render each student
+const StudentItem = ({ item }: { item: UserProfile }) => (
   <View style={styles.itemContainer}>
     <View style={styles.itemContent}>
       <Text style={styles.itemTitle}>
@@ -30,19 +22,29 @@ const StudentItem = ({
       </Text>
       <Text style={styles.itemSubtitle}>{item.email}</Text>
     </View>
-    <Button title="Edit" onPress={onEdit} />
+    {/* We'll add navigation to ViewStudentAttendanceScreen later */}
+    <Button title="View" onPress={() => { /* TODO */ }} />
   </View>
 );
 
-const ManageStudentsScreen = ({ navigation }: Props) => {
+const MyStudentsScreen = () => {
   const [students, setStudents] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { userProfile } = useAuth(); // 2. Get the logged-in user's profile
 
   const fetchStudents = async () => {
+    // 3. Make sure we have a profile and the user is a teacher
+    if (!userProfile || userProfile.role !== 'teacher') {
+      setError('You must be a teacher to view this screen.');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const studentList = await getStudentsByRole();
+      // 4. Call the service with the teacher's UID
+      const studentList = await getStudentsByFaculty(userProfile.uid);
       setStudents(studentList);
       setError(null);
     } catch (err) {
@@ -54,15 +56,10 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
   };
 
   useEffect(() => {
-    // Re-fetch students when the screen is focused (e.g., after adding one)
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchStudents();
-    });
-    return unsubscribe;
-  }, [navigation]);
+    fetchStudents();
+  }, [userProfile]); // 5. Re-run if the profile changes
 
   const renderContent = () => {
-    // This 'if' block is where the error was. It is fixed here.
     if (loading) {
       return <ActivityIndicator size="large" style={styles.loader} />;
     }
@@ -74,10 +71,7 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
     if (students.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No students found.</Text>
-          <Text style={styles.emptySubtitle}>
-            Tap the + button to add the first student.
-          </Text>
+          <Text style={styles.emptyText}>No students are assigned to you.</Text>
         </View>
       );
     }
@@ -85,16 +79,9 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
     return (
       <FlatList
         data={students}
-        renderItem={({ item }) => (
-          <StudentItem
-            item={item}
-            onEdit={() =>
-              navigation.navigate('EditStudent', { studentId: item.uid })
-            }
-          />
-        )}
+        renderItem={({ item }) => <StudentItem item={item} />}
         keyExtractor={(item) => item.uid}
-        onRefresh={fetchStudents}
+        onRefresh={fetchStudents} // Add pull-to-refresh
         refreshing={loading}
       />
     );
@@ -103,13 +90,7 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.title}>Manage Students</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddStudent')}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>My Students</Text>
       </View>
       {renderContent()}
     </SafeAreaView>
@@ -122,33 +103,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f7f8',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    alignItems: 'center', // Center title
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    lineHeight: 30,
   },
   loader: {
     marginTop: 50,
@@ -172,12 +137,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
   },
-  emptySubtitle: {
-    textAlign: 'center',
-    marginTop: 10,
-    fontSize: 14,
-    color: '#666',
-  },
   itemContainer: {
     backgroundColor: '#fff',
     padding: 16,
@@ -191,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemContent: {
-    flex: 1, // Allows text to shrink
+    flex: 1,
   },
   itemTitle: {
     fontSize: 18,
@@ -207,4 +166,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ManageStudentsScreen;
+export default MyStudentsScreen;
