@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
-import { logIn } from '../services/authService';
+import { signUp } from '../services/authService';
+import { createUserProfile } from '../services/firestoreService';
+import { UserRole } from '../types';
 
 // --- Our Color Palette ---
 const COLORS = {
@@ -26,26 +28,37 @@ const COLORS = {
 };
 
 // --- Props ---
-type LoginScreenProps = StackScreenProps<AuthStackParamList, 'Login'>;
+type SignUpScreenProps = StackScreenProps<AuthStackParamList, 'SignUp'>;
 
-const LoginScreen = ({ navigation }: LoginScreenProps) => {
+const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [role, setRole] = useState<UserRole>('student'); // Default role
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (email === '' || password === '') {
-      Alert.alert('Error', 'Please enter both email and password.');
+  const handleSignUp = async () => {
+    if (!email || !password || !firstName || !lastName) {
+      Alert.alert('Missing Fields', 'Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
-      await logIn(email, password);
-      // On success, AuthContext handles navigation
+      // Step 1: Create the user in Firebase Auth
+      const userCred = await signUp(email, password);
+      const uid = userCred.user.uid;
+
+      // Step 2: Create the user profile in Firestore
+      await createUserProfile(uid, email, firstName, lastName, role);
+      
+      // Success! AuthContext will automatically pick up the new user
+      // and navigate to the main app.
+      
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Login Failed', error.message || 'An unknown error occurred.');
+      Alert.alert('Sign Up Failed', error.message || 'An unknown error occurred.');
     } finally {
       setLoading(false);
     }
@@ -60,12 +73,24 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
       </View>
 
       <View style={styles.container}>
-        <Text style={styles.headerTitle}>LifeSkills BVET Centre</Text>
+        <Text style={styles.headerTitle}>Create Your Account</Text>
         
         {/* Card with Shadow */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Login</Text>
-
+          <TextInput
+            style={styles.input}
+            placeholder="First Name"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Last Name"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -82,18 +107,42 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
             secureTextEntry
           />
 
+          {/* Role Selector */}
+          <Text style={styles.label}>Select Role:</Text>
+          <View style={styles.roleContainer}>
+            {(['student', 'teacher', 'parent', 'management'] as UserRole[]).map((r) => (
+              <TouchableOpacity
+                key={r}
+                style={[
+                  styles.roleButton,
+                  role === r && styles.roleButtonSelected,
+                ]}
+                onPress={() => setRole(r)}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    role === r && styles.roleTextSelected,
+                  ]}
+                >
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {loading ? (
             <ActivityIndicator size="large" color={COLORS.primary} style={styles.buttonSpinner} />
           ) : (
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Login</Text>
+            <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+              <Text style={styles.buttonText}>Sign Up</Text>
             </TouchableOpacity>
           )}
 
           <View style={styles.footerContainer}>
-            <Text style={styles.secondaryText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.linkText}>Sign Up</Text>
+            <Text style={styles.secondaryText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.linkText}>Login</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -165,13 +214,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 20,
-    color: COLORS.text,
-    textAlign: 'center',
-  },
   input: {
     backgroundColor: COLORS.input,
     borderRadius: 8,
@@ -181,6 +223,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  label: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: 10,
+  },
+  roleContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  roleButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: '48%', // 2 columns
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  roleButtonSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  roleText: {
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  roleTextSelected: {
+    color: COLORS.card,
+    fontWeight: 'bold',
   },
   button: {
     backgroundColor: COLORS.primary,
@@ -215,4 +290,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default SignUpScreen;
