@@ -1,5 +1,6 @@
 import {
     auth,
+    secondaryAuth, // 1. Add this import
     // We'll use db later for creating user profiles
     // db 
   } from './firebaseConfig';
@@ -56,4 +57,19 @@ import {
    */
   export const getCurrentUser = () => {
     return auth.currentUser;
+    
+  };
+
+  // ... (keep signUp, logIn, logOut, etc. above)
+
+/**
+ * [Management] Creates a new auth user in the background
+ * using the secondary auth instance.
+ * This does NOT log the current admin out.
+ * @param email - The new user's email.
+ * @param password - The new user's password.
+ * @returns The new user's credentials.
+ */
+export const createAuthUser = (email: string, password: string) => {
+    return createUserWithEmailAndPassword(secondaryAuth, email, password);
   };

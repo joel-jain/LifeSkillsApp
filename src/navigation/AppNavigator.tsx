@@ -2,9 +2,10 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../store/AuthContext';
 
-// Import all our role-specific screens
+// Import all our role-specific screens & navigators
 import HomeScreen from '../screens/HomeScreen';
-import ManageStudentsScreen from '../screens/ManageStudentsScreen';
+// 1. IMPORT THE NEW STACK NAVIGATOR
+import { ManageStackNavigator } from './ManageStackNavigator';
 import MyStudentsScreen from '../screens/MyStudentsScreen';
 import MyChildAttendanceScreen from '../screens/MyChildAttendanceScreen';
 import MyAttendanceScreen from '../screens/MyAttendanceScreen';
@@ -32,7 +33,7 @@ export const AppNavigator = () => {
         component={HomeScreen}
         options={{
           title: 'Home',
-          // We'll add icons here later
+          headerShown: false, // Let's hide the header for all screens
         }}
       />
 
@@ -40,9 +41,11 @@ export const AppNavigator = () => {
       {role === 'management' && (
         <Tab.Screen
           name="Manage"
-          component={ManageStudentsScreen}
+          // 2. USE THE STACK NAVIGATOR AS THE COMPONENT
+          component={ManageStackNavigator}
           options={{
-            title: 'Manage Students',
+            title: 'Manage',
+            headerShown: false, // Hide the tab navigator's header
           }}
         />
       )}
@@ -54,6 +57,7 @@ export const AppNavigator = () => {
           component={MyStudentsScreen}
           options={{
             title: 'My Students',
+            headerShown: false,
           }}
         />
       )}
@@ -65,6 +69,7 @@ export const AppNavigator = () => {
           component={MyChildAttendanceScreen}
           options={{
             title: "Child's Attendance",
+            headerShown: false,
           }}
         />
       )}
@@ -76,6 +81,7 @@ export const AppNavigator = () => {
           component={MyAttendanceScreen}
           options={{
             title: 'My Attendance',
+            headerShown: false,
           }}
         />
       )}

@@ -1,12 +1,15 @@
 import { db } from './firebaseConfig';
 import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  addDoc,
-  updateDoc,
-} from 'firebase/firestore';
+    doc,
+    setDoc,
+    getDoc,
+    collection,
+    addDoc,
+    updateDoc,
+    query,
+    where,
+    getDocs,
+  } from 'firebase/firestore';
 import type {
   UserProfile,
   StudentDetails,
@@ -113,3 +116,59 @@ export const updateStudentCaseHistory = async (
     caseHistory: newCaseHistory,
   });
 };
+
+/**
+ * [Management] Fetches all user profiles with the 'student' role.
+ */
+export const getStudentsByRole = async () => {
+  // 1. Create a reference to the 'users' collection
+  const usersCollectionRef = collection(db, 'users');
+
+  // 2. Create a query against the collection
+  const q = query(usersCollectionRef, where('role', '==', 'student'));
+
+  // 3. Execute the query
+  const querySnapshot = await getDocs(q);
+
+  // 4. Map the results to an array
+  const students: UserProfile[] = [];
+  querySnapshot.forEach((doc) => {
+    students.push(doc.data() as UserProfile);
+  });
+
+  return students;
+};
+
+// ... (keep all existing code)
+
+/**
+ * [Management] Fetches a student's details (case history, etc.)
+ * @param studentId - The UID of the student.
+ */
+export const getStudentDetails = async (studentId: string) => {
+    const studentDocRef = doc(db, 'studentDetails', studentId);
+    const docSnap = await getDoc(studentDocRef);
+  
+    if (docSnap.exists()) {
+      return docSnap.data() as StudentDetails;
+    } else {
+      console.error('No such student details document!');
+      return null;
+    }
+  };
+  
+  /**
+   * [Management] Updates a student's case history.
+   * (This is a slightly improved version of the one we wrote in 3.2)
+   * @param studentId - The UID of the student.
+   * @param newCaseHistory - The new case history text.
+   */
+  export const updateStudentDetails = async (
+    studentId: string,
+    newCaseHistory: string
+  ) => {
+    const studentDocRef = doc(db, 'studentDetails', studentId);
+    await updateDoc(studentDocRef, {
+      caseHistory: newCaseHistory,
+    });
+  };
