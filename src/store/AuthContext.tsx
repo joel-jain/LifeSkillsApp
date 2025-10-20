@@ -2,9 +2,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { type User } from 'firebase/auth';
 import { onAuthUserChanged } from '../services/authService';
 import { getUserProfile } from '../services/firestoreService';
-import { type UserProfile } from '../types'; // Import our UserProfile type
+import { type UserProfile } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Import AsyncStorage
+import { registerForPushNotificationsAsync, saveTokenToUserProfile } from '../services/notificationService';
 
-// Define the new shape of our auth context
+// Define the shape of our auth context
 interface AuthContextType {
   user: User | null; // Firebase Auth user
   userProfile: UserProfile | null; // Our Firestore user profile
@@ -12,17 +14,18 @@ interface AuthContextType {
   initializing: boolean;
 }
 
-// Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Create the provider component
+// Define keys for local storage
+const STUDENT_UID_KEY = 'student_uid';
+const STUDENT_NAME_KEY = 'student_name';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    // Listen for auth state changes
     const unsubscribe = onAuthUserChanged(async (authUser) => {
       setUser(authUser);
 
@@ -30,9 +33,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // User logged IN. Fetch their profile.
         const profile = await getUserProfile(authUser.uid);
         setUserProfile(profile);
+
+        // Get and save push token for all users
+        try {
+          const token = await registerForPushNotificationsAsync();
+          if (token && profile) {
+            if (profile.pushToken !== token) {
+              await saveTokenToUserProfile(profile.uid, token);
+            }
+          }
+        } catch (e) {
+          console.error('Push Token registration failed:', e);
+        }
+
+        // 2. Save student info to local storage
+        if (profile && profile.role === 'student') {
+          await AsyncStorage.setItem(STUDENT_UID_KEY, profile.uid);
+          await AsyncStorage.setItem(
+            STUDENT_NAME_KEY,
+            `${profile.firstName} ${profile.lastName}`
+          );
+          console.log('Student info saved to local storage.');
+        } else {
+          // If user is not a student, clear any old data
+          await AsyncStorage.removeItem(STUDENT_UID_KEY);
+          await AsyncStorage.removeItem(STUDENT_NAME_KEY);
+        }
       } else {
-        // User logged OUT. Clear their profile.
+        // 3. User logged OUT. Clear their profile and local storage.
         setUserProfile(null);
+        await AsyncStorage.removeItem(STUDENT_UID_KEY);
+        await AsyncStorage.removeItem(STUDENT_NAME_KEY);
+        console.log('User logged out, local storage cleared.');
       }
 
       if (initializing) {
@@ -40,18 +72,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Cleanup subscription on unmount
     return unsubscribe;
   }, [initializing]);
 
   const value = {
     user,
     userProfile,
-    role: userProfile?.role || null, // Provide the role for convenience
+    role: userProfile?.role || null,
     initializing,
   };
 
-  // Don't render the app until we've finished checking the auth state
   if (initializing) {
     return null; // Or a loading spinner
   }
@@ -59,7 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Create a custom hook to easily access the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

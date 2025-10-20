@@ -1,25 +1,68 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Button, // 1. Import Button
-  Alert, // 2. Import Alert
+  SafeAreaView,
+  Button,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../store/AuthContext';
-import { logOut } from '../services/authService'; // 3. Import logOut
+import { logOut } from '../services/authService';
+import {
+  requestLocationPermissions,
+  getGeofenceRegion,
+} from '../services/locationService';
+import * as Location from 'expo-location';
+import { GEOFENCE_TASK_NAME } from '../services/geofenceTask';
+
+const startGeofencing = async () => {
+  try {
+    const region = await getGeofenceRegion();
+    if (!region) {
+      console.log('Geofence region not found. Skipping start.');
+      return;
+    }
+
+    await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, [region]);
+    console.log('Geofencing task started successfully.');
+  } catch (err: any) {
+    console.error('Failed to start geofencing:', err.message);
+    Alert.alert('Error', 'Failed to start automatic attendance.');
+  }
+};
 
 const HomeScreen = () => {
   const { userProfile } = useAuth();
 
-  // 4. Create the logout handler
+  useEffect(() => {
+    // Only run this logic if the user is a student
+    if (userProfile?.role === 'student') {
+      const checkPermissionsAndStart = async () => {
+        try {
+          const { status } = await Location.getBackgroundPermissionsAsync();
+          if (status !== 'granted') {
+            const granted = await requestLocationPermissions();
+            if (granted) {
+              await startGeofencing();
+            }
+          } else {
+            await startGeofencing();
+          }
+        } catch (err: any) {
+          console.error('Error in checkPermissionsAndStart:', err.message);
+        }
+      };
+
+      checkPermissionsAndStart();
+    }
+  }, [userProfile]);
+
   const handleLogout = () => {
     Alert.alert(
-      'Logout', // Title
-      'Are you sure you want to log out?', // Message
+      'Logout',
+      'Are you sure you want to log out?',
       [
-        // Button Array
         {
           text: 'Cancel',
           onPress: () => console.log('Logout cancelled'),
@@ -29,23 +72,25 @@ const HomeScreen = () => {
           text: 'Logout',
           onPress: async () => {
             try {
+              if (userProfile?.role === 'student') {
+                await Location.stopGeofencingAsync(GEOFENCE_TASK_NAME);
+                console.log('Geofencing stopped.');
+              }
               await logOut();
-              // AuthContext will handle navigation
             } catch (error) {
               console.error(error);
               Alert.alert('Error', 'Failed to log out.');
             }
           },
-          style: 'destructive', // 'destructive' gives it a red color on iOS
+          style: 'destructive',
         },
       ],
-      { cancelable: false } // User must tap a button
+      { cancelable: false }
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* 5. Add a header View to hold the button */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Home</Text>
         <Button title="Logout" onPress={handleLogout} color="#dc3545" />
@@ -54,13 +99,12 @@ const HomeScreen = () => {
         <Text style={styles.title}>Welcome, {userProfile?.firstName}!</Text>
         <Text style={styles.subtitle}>
           You are logged in as: {userProfile?.role}
-        </Text>
+        </Text> {/* <-- THIS IS THE FIX */}
       </View>
     </SafeAreaView>
   );
 };
 
-// 6. Add new styles for the header
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

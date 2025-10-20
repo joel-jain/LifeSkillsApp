@@ -10,6 +10,7 @@ export interface UserProfile {
   role: UserRole;
   firstName: string;
   lastName: string;
+  pushToken?: string; // Expo push notification token
   // We can add more common fields like phoneNumber, profilePicUrl, etc.
 }
 

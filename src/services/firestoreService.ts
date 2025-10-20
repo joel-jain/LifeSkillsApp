@@ -15,6 +15,7 @@ import type {
   StudentDetails,
   UserRole,
 } from '../types';
+import { GeofenceZone } from '../types'; // 1. Import GeofenceZone type
 
 /**
  * Creates a new user profile document in Firestore.
@@ -138,8 +139,6 @@ export const getStudentsByRole = async () => {
 
   return students;
 };
-
-// ... (keep all existing code)
 
 /**
  * [Management] Fetches a student's details (case history, etc.)
@@ -266,3 +265,86 @@ import {
     // This ensures a student can only have one record per day
     await setDoc(attendanceDocRef, record);
   };
+
+  /**
+   * [Background Task] Logs a geofence event to the attendance records.
+   * @param studentId - The UID of the student.
+   * @param studentName - The student's full name.
+   * @param eventType - 'enter' or 'exit'.
+   */
+  export const logGeofenceEvent = async (
+    studentId: string,
+    studentName: string,
+    eventType: 'enter' | 'exit'
+  ) => {
+    // 1. Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
+    // 2. Create the unique doc ID for this student and day
+    const docId = `${studentId}_${today}`;
+    const attendanceDocRef = doc(db, 'attendanceRecords', docId);
+
+    if (eventType === 'enter') {
+      // 3. On ENTER: Create a new record for today
+      const newRecord: AttendanceRecord = {
+        id: docId,
+        studentId: studentId,
+        studentName: studentName,
+        date: today,
+        status: 'present',
+        // Store as number to align with current AttendanceRecord type
+        checkInTime: Date.now(),
+        checkOutTime: null,
+        markedBy: 'system', // Marked by geofence
+        geofenceEvent: 'enter',
+      };
+      // Use setDoc with merge: true - creates if missing, preserves manual updates
+      await setDoc(attendanceDocRef, newRecord, { merge: true });
+    } else if (eventType === 'exit') {
+      // 4. On EXIT: Update the existing record for today
+      await updateDoc(attendanceDocRef, {
+        // Store as number to align with current AttendanceRecord type
+        checkOutTime: Date.now(),
+        geofenceEvent: 'exit',
+      });
+    }
+  };
+
+// We'll use a consistent ID for the geofence doc to easily find it
+const GEOFENCE_DOC_ID = 'main_campus';
+
+/**
+ * [Management] Saves or updates the geofence settings.
+ * @param center - The latitude and longitude.
+ * @param radius - The radius in meters.
+ */
+export const setGeofenceZone = async (
+  center: { latitude: number; longitude: number },
+  radius: number
+) => {
+  const geofenceDocRef = doc(db, 'settings', GEOFENCE_DOC_ID);
+  
+  const geofenceData: GeofenceZone = {
+    id: GEOFENCE_DOC_ID,
+    center: center,
+    radius: radius,
+  };
+
+  // setDoc will create or overwrite the document
+  await setDoc(geofenceDocRef, geofenceData);
+};
+
+/**
+ * Fetches the geofence settings.
+ * @returns The GeofenceZone object, or null if not set.
+ */
+export const getGeofenceZone = async () => {
+  const geofenceDocRef = doc(db, 'settings', GEOFENCE_DOC_ID);
+  const docSnap = await getDoc(geofenceDocRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data() as GeofenceZone;
+  } else {
+    return null;
+  }
+};
