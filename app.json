@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
- 
     "ios": {
       "supportsTablet": true
     },
@@ -20,8 +19,8 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION"
       ],
-      "useGoogleServices": true,  
-      "notification": {           
+      "useGoogleServices": true,
+      "notification": {
         "icon": "./assets/icon.png",
         "color": "#007AFF"
       }
@@ -36,6 +35,12 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9b31cadc-dd73-4504-a954-a5824e472e89"
+      }
+    },
+    "owner": "joeljain04"
   }
 }

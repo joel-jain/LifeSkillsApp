@@ -9,11 +9,13 @@ import {
     query,
     where,
     getDocs,
+    orderBy, // 1. Import orderBy
   } from 'firebase/firestore';
 import type {
   UserProfile,
   StudentDetails,
   UserRole,
+  SafetyIncident,
 } from '../types';
 import { GeofenceZone } from '../types'; // 1. Import GeofenceZone type
 
@@ -347,4 +349,49 @@ export const getGeofenceZone = async () => {
   } else {
     return null;
   }
+};
+
+export const createSafetyIncident = async (
+  studentId: string,
+  studentName: string,
+  facultyId: string,
+  description: string,
+  severity: 'low' | 'medium' | 'high'
+) => {
+  const incidentCollectionRef = collection(db, 'safetyIncidents');
+  const newIncident: Omit<SafetyIncident, 'id'> = {
+    studentId: studentId,
+    studentName: studentName,
+    reportedBy: facultyId,
+    reportedAt: Date.now(),
+    description: description,
+    severity: severity,
+  };
+  const docRef = await addDoc(incidentCollectionRef, newIncident);
+  await updateDoc(docRef, {
+    id: docRef.id,
+  });
+};
+
+/**
+ * [Management] Fetches all safety incident reports, ordered by most recent first.
+ */
+export const getAllSafetyIncidents = async () => {
+  // 1. Get a reference to the collection
+  const incidentCollectionRef = collection(db, 'safetyIncidents');
+
+  // 2. Create a query, ordering by 'reportedAt' timestamp in descending order
+  const q = query(incidentCollectionRef, orderBy('reportedAt', 'desc'));
+
+  // 3. Execute the query
+  const querySnapshot = await getDocs(q);
+
+  // 4. Map the results
+  const incidents: SafetyIncident[] = [];
+  querySnapshot.forEach((doc) => {
+    // Ensure the data matches the type, including the ID
+    incidents.push({ id: doc.id, ...doc.data() } as SafetyIncident);
+  });
+
+  return incidents;
 };

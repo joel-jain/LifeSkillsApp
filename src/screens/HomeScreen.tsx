@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Button,
   Alert,
 } from 'react-native';
@@ -15,6 +14,7 @@ import {
 } from '../services/locationService';
 import * as Location from 'expo-location';
 import { GEOFENCE_TASK_NAME } from '../services/geofenceTask';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const startGeofencing = async () => {
   try {

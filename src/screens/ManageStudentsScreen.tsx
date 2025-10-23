@@ -98,22 +98,33 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
     );
   };
 
+  // ... (keep everything before the return statement)
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        {/* 1. Add Settings Button */}
+        {/* Settings Button */}
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => navigation.navigate('GeofenceSettings')}
         >
           <Text style={styles.headerButtonText}>⚙️</Text>
         </TouchableOpacity>
-        
-        <Text style={styles.title}>Manage Students</Text>
 
-        {/* 2. Add Student Button */}
+        {/* Title */}
+        <Text style={styles.title}>Manage</Text>
+
+        {/* Incident Report Button */}
         <TouchableOpacity
           style={styles.headerButton}
+          onPress={() => navigation.navigate('SafetyIncidentReport')} // <-- Navigate here
+        >
+          <Text style={styles.headerButtonText}>⚠️</Text> 
+        </TouchableOpacity>
+
+        {/* Add Student Button */}
+        <TouchableOpacity
+          style={[styles.headerButton, styles.addButton]} // Keep original style too
           onPress={() => navigation.navigate('AddStudent')}
         >
           <Text style={styles.headerButtonText}>+</Text>
@@ -124,39 +135,11 @@ const ManageStudentsScreen = ({ navigation }: Props) => {
   );
 };
 
-// 3. Update styles
+// --- Update Styles ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f4f7f8',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   loader: {
     marginTop: 50,
@@ -171,22 +154,56 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
   },
   emptyText: {
-    textAlign: 'center',
-    marginTop: 50,
     fontSize: 18,
     fontWeight: '500',
-    color: '#333',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   emptySubtitle: {
-    textAlign: 'center',
-    marginTop: 10,
     fontSize: 14,
-    color: '#666',
+    color: '#999',
+    textAlign: 'center',
   },
-  itemContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Adjust spacing
+    alignItems: 'center',
+    paddingHorizontal: 12, // Slightly reduce padding
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    // Removed margin to let space-between work better
+  },
+  headerButton: {
+    width: 36, // Smaller buttons
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    marginHorizontal: 4, // Add spacing between buttons
+  },
+  addButton: { // Keep specific add button styles if needed
+     // Example: backgroundColor: '#28a745',
+  },
+  headerButtonText: {
+    color: '#fff',
+    fontSize: 20, // Adjust icon size
+    fontWeight: 'bold',
+    lineHeight: 24, // Adjust vertical centering
+  },
+   // ... (keep the rest of the styles)
+   itemContainer: {
     backgroundColor: '#fff',
     padding: 16,
     marginVertical: 8,
@@ -199,7 +216,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemContent: {
-    flex: 1,
+    flex: 1, // Allows text to shrink
   },
   itemTitle: {
     fontSize: 18,

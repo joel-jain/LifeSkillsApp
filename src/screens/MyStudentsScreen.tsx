@@ -9,22 +9,29 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-// 1. Import markAttendance
+// 1. Import navigation types
+import { StackScreenProps } from '@react-navigation/stack';
+import { FacultyStackParamList } from '../navigation/FacultyStackNavigator';
 import {
   markAttendance,
-  getStudentsByFaculty, // 1. Add this import
+  getStudentsByFaculty,
 } from '../services/firestoreService';
 import { UserProfile } from '../types';
 import { useAuth } from '../store/AuthContext';
 
-// 2. Update the StudentItem component
+// 2. Define component props
+type Props = StackScreenProps<FacultyStackParamList, 'MyStudents'>;
+
+// 3. Update StudentItem props
 const StudentItem = ({
   item,
   onMark,
+  onReport, // Add onReport prop
   isMarking,
 }: {
   item: UserProfile;
   onMark: (status: 'present' | 'absent') => void;
+  onReport: () => void; // Add onReport prop
   isMarking: boolean;
 }) => (
   <View style={styles.itemContainer}>
@@ -54,24 +61,32 @@ const StudentItem = ({
         </>
       )}
     </View>
+    {/* 4. Add Report Button */}
+    <TouchableOpacity
+      style={styles.reportButton}
+      onPress={onReport}
+      disabled={isMarking}
+    >
+      <Text style={styles.reportButtonText}>Report</Text>
+    </TouchableOpacity>
   </View>
 );
 
-const MyStudentsScreen = () => {
+// 5. Add navigation prop to the component
+const MyStudentsScreen = ({ navigation }: Props) => {
   const [students, setStudents] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 3. Add state to track which student is being marked
   const [markingStudentId, setMarkingStudentId] = useState<string | null>(null);
   const { userProfile } = useAuth();
 
   const fetchStudents = async () => {
+    // ... (fetchStudents logic remains the same)
     if (!userProfile || userProfile.role !== 'teacher') {
       setError('You must be a teacher to view this screen.');
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       const studentList = await getStudentsByFaculty(userProfile.uid);
@@ -86,17 +101,20 @@ const MyStudentsScreen = () => {
   };
 
   useEffect(() => {
-    fetchStudents();
-  }, [userProfile]);
+    // 6. Re-fetch when the screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchStudents();
+    });
+    return unsubscribe;
+  }, [userProfile, navigation]); // Add navigation dependency
 
-  // 4. Create the function to handle marking attendance
   const handleMarkAttendance = async (
     student: UserProfile,
     status: 'present' | 'absent'
   ) => {
-    if (!userProfile) return; // Should never happen if they see the screen
-
-    setMarkingStudentId(student.uid); // Show spinner on this item
+    // ... (handleMarkAttendance logic remains the same)
+    if (!userProfile) return;
+    setMarkingStudentId(student.uid);
     try {
       await markAttendance(
         student.uid,
@@ -112,19 +130,18 @@ const MyStudentsScreen = () => {
       console.error(err);
       Alert.alert('Error', 'Failed to mark attendance. ' + err.message);
     } finally {
-      setMarkingStudentId(null); // Hide spinner
+      setMarkingStudentId(null);
     }
   };
 
   const renderContent = () => {
+    // ... (renderContent logic remains the same)
     if (loading) {
       return <ActivityIndicator size="large" style={styles.loader} />;
     }
-
     if (error) {
       return <Text style={styles.errorText}>{error}</Text>;
     }
-
     if (students.length === 0) {
       return (
         <View style={styles.emptyContainer}>
@@ -137,11 +154,17 @@ const MyStudentsScreen = () => {
       <FlatList
         data={students}
         renderItem={({ item }) => (
-          // 5. Pass props to the StudentItem
           <StudentItem
             item={item}
             isMarking={markingStudentId === item.uid}
             onMark={(status) => handleMarkAttendance(item, status)}
+            // 7. Pass the navigation handler
+            onReport={() =>
+              navigation.navigate('ReportIncident', {
+                studentId: item.uid,
+                studentName: `${item.firstName} ${item.lastName}`,
+              })
+            }
           />
         )}
         keyExtractor={(item) => item.uid}
@@ -161,7 +184,7 @@ const MyStudentsScreen = () => {
   );
 };
 
-// 6. Add new styles for the buttons
+// 8. Add/update styles
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -213,9 +236,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap', // Allow wrapping for the report button
   },
   itemContent: {
-    flex: 1,
+    flexBasis: '100%', // Take full width on its own line
+    marginBottom: 12,
   },
   itemTitle: {
     fontSize: 18,
@@ -231,21 +256,32 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
+    flexGrow: 1, // Grow to take available space
   },
   button: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 5,
-    marginLeft: 8,
+    marginRight: 8, // Use marginRight for spacing
   },
   presentButton: {
-    backgroundColor: '#28a745', // Green
+    backgroundColor: '#28a745',
   },
   absentButton: {
-    backgroundColor: '#dc3545', // Red
+    backgroundColor: '#dc3545',
   },
   buttonText: {
     color: '#fff',
+    fontWeight: 'bold',
+  },
+  reportButton: {
+    backgroundColor: '#ffc107', // Yellow for caution
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+  },
+  reportButtonText: {
+    color: '#333',
     fontWeight: 'bold',
   },
 });

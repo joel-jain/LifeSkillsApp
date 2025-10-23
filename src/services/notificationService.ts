@@ -2,46 +2,42 @@ import { Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { db } from './firebaseConfig';
 import { doc, updateDoc } from 'firebase/firestore';
+import Constants from 'expo-constants'; // 1. Import Constants
 
-// Set default notification handling (show alert even if app is open)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: false,
     shouldSetBadge: false,
+    shouldShowBanner: true, 
+    shouldShowList: true,   
   }),
 });
 
-/**
- * Asks for push notification permissions and gets the token.
- * @returns {Promise<string | null>} The Expo push token or null.
- */
 export const registerForPushNotificationsAsync = async (): Promise<string | null> => {
+  // ... (keep the Android channel logic)
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
+    // ...
   }
 
+  // ... (keep the permission request logic)
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
+  // ...
   if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    Alert.alert('Permission Denied', 'Failed to get push token for notification!');
+    // ...
     return null;
   }
 
   try {
-    // This is the user's unique push notification token
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    // 2. Get the projectId from app.json
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+
+    if (!projectId) {
+      throw new Error("Project ID not found in app.json. Please add it under extra.eas.projectId");
+    }
+
+    // 3. Pass the projectId to the function
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     console.log('Push Token:', token);
     return token;
   } catch (error) {
@@ -50,19 +46,6 @@ export const registerForPushNotificationsAsync = async (): Promise<string | null
   }
 };
 
-/**
- * Saves a user's push token to their 'users' profile in Firestore.
- * @param uid - The user's UID.
- * @param token - The push token.
- */
 export const saveTokenToUserProfile = async (uid: string, token: string) => {
-  try {
-    const userDocRef = doc(db, 'users', uid);
-    // We use updateDoc to add or update the 'pushToken' field
-    await updateDoc(userDocRef, {
-      pushToken: token,
-    });
-  } catch (error) {
-    console.error('Error saving token to Firestore:', error);
-  }
+  // ... (this function is correct, no changes needed)
 };
