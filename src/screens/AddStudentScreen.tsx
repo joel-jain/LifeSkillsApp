@@ -37,11 +37,14 @@ const AddStudentScreen = ({ navigation }: Props) => {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    setEmail(normalizedEmail); // Update state for consistency
+
     setLoading(true);
     try {
       // 1. Create the new auth user
       const userCred = await createAuthUser(
-        email.trim().toLowerCase(),
+        normalizedEmail,
         password
       );
       const uid = userCred.user.uid;
@@ -49,7 +52,7 @@ const AddStudentScreen = ({ navigation }: Props) => {
       // 2. Create their UserProfile document
       await createUserProfile(
         uid,
-        email.trim().toLowerCase(),
+        normalizedEmail,
         firstName.trim(),
         lastName.trim(),
         'student' // Set their role
