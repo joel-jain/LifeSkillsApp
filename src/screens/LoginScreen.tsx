@@ -7,9 +7,9 @@ import {
   Alert,
   ActivityIndicator,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackScreenProps } from '@react-navigation/stack';
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { logIn } from '../services/authService';
@@ -40,8 +40,9 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
     }
 
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     try {
-      await logIn(email, password);
+      await logIn(normalizedEmail, password);
       // On success, AuthContext handles navigation
     } catch (error: any) {
       console.error(error);
@@ -85,7 +86,11 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
           {loading ? (
             <ActivityIndicator size="large" color={COLORS.primary} style={styles.buttonSpinner} />
           ) : (
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleLogin}
+              testID="loginButton"
+            >
               <Text style={styles.buttonText}>Login</Text>
             </TouchableOpacity>
           )}
